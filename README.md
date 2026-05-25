@@ -9,6 +9,13 @@
 **核心关键词：**
 低延迟 | 极简参考系 | 惯性而非动画 | 余光感知 | 零内部静态锚点
 
+## 设计理念：环境计算 (Ambient Computing)
+> “放在那里，然后彻底忘记它”——这正是**“环境计算 (Ambient Computing)”与“无意识交互 (Calm Technology)”**设计的最高境界。
+
+很多极客产品失败的原因，就在于它们总试图通过花哨的界面和复杂的交互来彰显自己的存在感，迫使驾驶员去“关注”它们。而 HorizonAid 从一开始就选择了一条反其道而行之的硬核路线：**它不是一块显示屏，它是车体向人类大脑延伸的一条神经。**
+
+您只需要给它通上电，它就会默默地在您的余光里编织一个稳定的三维重力锚点。不需要开机画面、不需要调节亮度、不需要盯着它看。只要它在那里，车上的家人朋友就不会晕车，这就足够了。
+
 ## 状态 (Status)
 **已完结 (Finished)** - 核心架构与预测层均已完成部署，无需进一步修改即可进行实车运行。
 
@@ -61,6 +68,13 @@ An IMU-based in-vehicle visual-inertial compensation system that builds a stable
 
 **Core Keywords:**
 Low Latency | Minimalist Reference | Inertia Not Animation | Peripheral Awareness | Zero Static Anchors
+
+## Design Philosophy: Ambient Computing
+> "Put it there, and completely forget about it" — this is the ultimate manifestation of **"Ambient Computing" and "Calm Technology"**.
+
+Many tech products fail because they try to assert their presence through flashy interfaces and complex interactions, forcing the driver to "focus" on them. HorizonAid chose a hardcore opposite path from the very beginning: **It is not a display screen; it is a nerve extending from the vehicle to the human brain.**
+
+You only need to power it on, and it will silently weave a stable 3D gravity anchor in your peripheral vision. No boot screens, no brightness adjustments, no staring required. As long as it is there, your family and friends in the car won't get motion sickness, and that is enough.
 
 ## Status
 **Finished** - The core architecture and prediction layers are fully deployed and ready for real-world vehicle testing without further modification.

@@ -30,10 +30,10 @@ static constexpr int    VIBR_PWM_BITS      = 8;
 // 地平线俯仰角(Pitch)的视觉放大倍率。
 // 由于真实车内的物理倾角极小(常在2度以内)，需放大此系数以向大脑提供足够夸张的运动预期。
 // 必须为负数：车头向下倾斜（刹车点头）时，真实世界地平线在视野中是向上移动的。
-static constexpr float VISUAL_PITCH_MULTIPLIER = -6.0f;
+static constexpr float VISUAL_PITCH_MULTIPLIER = -4.0f;
 
 // 地平线白线的渲染粗细(像素)。加大粗细能使其在动态色块中保持绝对的核心辨识度。
-static constexpr int VISUAL_HORIZON_THICKNESS = 3;
+static constexpr int VISUAL_HORIZON_THICKNESS = 4;
 
 // 地平线软限幅的屏幕边缘安全距离(像素)。保证在急刹车等极度颠簸时主参考线也不会飞出屏幕失效。
 static constexpr float VISUAL_HORIZON_MARGIN = 5.0f;

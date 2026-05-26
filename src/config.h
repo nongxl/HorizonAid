@@ -61,6 +61,6 @@ static constexpr float INERTIA_K_ACCEL_FG = 60.0f;
 
 // 光流尾迹拉伸倍率 (Optic Flow Stretch)
 // 决定了在一定移动速度下，色块拖尾的长度。前景层需要最强烈的“星际穿越”极速感。
-static constexpr float OPTIC_FLOW_STRETCH_BG = 4.0f;
-static constexpr float OPTIC_FLOW_STRETCH_MG = 8.0f;
-static constexpr float OPTIC_FLOW_STRETCH_FG = 12.0f;
+static constexpr float OPTIC_FLOW_STRETCH_BG = 12.0f;
+static constexpr float OPTIC_FLOW_STRETCH_MG = 16.0f;
+static constexpr float OPTIC_FLOW_STRETCH_FG = 24.0f;

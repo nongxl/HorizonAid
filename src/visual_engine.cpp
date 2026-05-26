@@ -65,26 +65,45 @@ void VisualEngine::update(const MotionState& motion, bool safeMode) {
         const LayerConfig& cfg = layer_cfg[lines[i].layer];
 
         // 目标偏移计算
-        // 引入 Layer 3 预测值：利用卡尔曼滤波器提取的趋势，提前推动目标位置
-        // 这消除了原本 IIR 低通滤波带来的迟滞感，使视觉反馈更“跟手”
-        float turn_val = current_motion.predicted_turn;
+        // Y轴 (加减速) 依然使用卡尔曼预测值以消除迟滞
         float accel_val = current_motion.predicted_accel;
         
-        float target_x = turn_val * cfg.k_turn;
+        // X轴 (转向) 作为速度积分器，必须放弃使用含有求导外推的卡尔曼预测值！
+        // 因为急停时角速度导数为极大的负值，卡尔曼外推会预测出一个“反向速度”，导致色块回弹。
+        // 直接使用经过低通滤波的真实角速度，确保速度只会平滑降至0而绝不穿过零点回弹。
+        float turn_val = current_motion.turn_intensity;
         
+        // Y 轴 (加减速)：保持目标位置的弹簧阻尼模型
         float normalized_i = (float(i) - N / 2.0f) / (N / 2.0f); 
         float target_y = accel_val * cfg.k_accel * normalized_i;
         target_y += current_motion.vibration * 2.0f;
 
-        // 弹簧阻尼系统
-        float force_x = (target_x - lines[i].offset.x) * cfg.stiffness;
+        // X 轴 (转向)：重构为目标速度模型
+        float target_v_x = turn_val * cfg.k_turn;
+
+        // -------------------------
+        // Y 轴计算 (位置弹簧控制)
+        // -------------------------
         float force_y = (target_y - lines[i].offset.y) * cfg.stiffness;
-
-        lines[i].velocity.x = (lines[i].velocity.x + force_x) * cfg.damping;
         lines[i].velocity.y = (lines[i].velocity.y + force_y) * cfg.damping;
-
-        lines[i].offset.x += lines[i].velocity.x;
         lines[i].offset.y += lines[i].velocity.y;
+
+        // -------------------------
+        // X 轴计算 (速度积分控制)
+        // -------------------------
+        // 用低通滤波模拟速度上的惯性迟滞，让起步和刹停更加平滑
+        lines[i].velocity.x = lines[i].velocity.x * 0.9f + target_v_x * 0.1f;
+        lines[i].offset.x += lines[i].velocity.x;
+
+        // -------------------------
+        // X 轴 Wrap-around 逻辑 (无缝循环滚动)
+        // -------------------------
+        float WRAP = 240.0f; // 屏幕宽度周期
+        if (lines[i].offset.x > WRAP) {
+            lines[i].offset.x -= WRAP;
+        } else if (lines[i].offset.x < 0.0f) {
+            lines[i].offset.x += WRAP;
+        }
     }
 }
 
@@ -120,8 +139,8 @@ void VisualEngine::drawInertiaField() {
         canvas.color565(45, 75, 45)
     };
 
-    // 为不同深度分配横线的长度
-    int layer_lengths[3] = { 20, 45, 80 };
+    // 为不同深度分配横线的长度 (缩短以提升高速运动时的方向辨别度)
+    int layer_lengths[3] = { 14, 30, 54 };
 
     // 为不同深度分配基础厚度 (像素)
     int layer_base_thickness[3] = { 1, 2, 4 };
@@ -151,23 +170,27 @@ void VisualEngine::drawInertiaField() {
             // 为了让色块以 Y 坐标居中，向上偏移一半的厚度
             int rect_y = (int)draw_y - (thickness / 2);
 
-            // 1. 先绘制该线段的尾迹光流 (色块)
             float vx = lines[i].velocity.x;
             float stretch = (current_layer == FOREGROUND) ? OPTIC_FLOW_STRETCH_FG : ((current_layer == MIDGROUND) ? OPTIC_FLOW_STRETCH_MG : OPTIC_FLOW_STRETCH_BG);
             int tail_len = (int)(std::abs(vx) * stretch);
 
-            if (tail_len > 2) {
-                // 速度为正（向右移动），尾迹在左侧；反之在右侧
-                int tx1 = (vx > 0) ? ((int)draw_x1 - tail_len) : ((int)draw_x1 + len);
-                canvas.fillRect(tx1, rect_y, tail_len, thickness, t_color);
+            // 绘制单个色块的 Lambda
+            auto drawBlock = [&](float x) {
+                // 1. 绘制尾迹
+                if (tail_len > 2) {
+                    int tx = (vx > 0) ? ((int)x - tail_len) : ((int)x + len);
+                    canvas.fillRect(tx, rect_y, tail_len, thickness, t_color);
+                }
+                // 2. 绘制主体
+                canvas.fillRect((int)x, rect_y, len, thickness, color);
+            };
 
-                int tx2 = (vx > 0) ? ((int)draw_x2 - tail_len) : ((int)draw_x2 + len);
-                canvas.fillRect(tx2, rect_y, tail_len, thickness, t_color);
+            // 周期为 240px，绘制左中右 3 个周期，确保在 offset wrap-around 时视觉上完全无缝
+            float WRAP = 240.0f;
+            for (int k = -1; k <= 1; k++) {
+                drawBlock(draw_x1 + k * WRAP);
+                drawBlock(draw_x2 + k * WRAP);
             }
-
-            // 2. 再绘制该线段的主体 (色块)
-            canvas.fillRect((int)draw_x1, rect_y, len, thickness, color);
-            canvas.fillRect((int)draw_x2, rect_y, len, thickness, color);
         }
     }
 }
@@ -188,8 +211,8 @@ void VisualEngine::drawHorizon() {
     cy += y_offset;
 
     // 添加 Roll 视觉死区 (Deadzone)
-    // 因为在低分辨率下（240px），极小角度的倾斜会导致线段在屏幕中间断裂成阶梯
-    float display_roll = current_motion.horizon_roll;
+    // 并且反转 Roll 方向，使车体右倾时，地平线相对屏幕左倾，严格锚定真实世界
+    float display_roll = -current_motion.horizon_roll;
     if (std::abs(display_roll) < VISUAL_ROLL_DEADZONE) {
         display_roll = 0.0f;
     }

@@ -72,6 +72,9 @@ void VisualEngine::update(const MotionState& motion, bool safeMode) {
         // 因为急停时角速度导数为极大的负值，卡尔曼外推会预测出一个“反向速度”，导致色块回弹。
         // 直接使用经过低通滤波的真实角速度，确保速度只会平滑降至0而绝不穿过零点回弹。
         float turn_val = current_motion.turn_intensity;
+        if (std::abs(turn_val) < VISUAL_TURN_DEADZONE) {
+            turn_val = 0.0f;
+        }
         
         // Y 轴 (加减速)：保持目标位置的弹簧阻尼模型
         float normalized_i = (float(i) - N / 2.0f) / (N / 2.0f); 
